@@ -11,12 +11,17 @@ import {
 import type { Response } from 'express';
 import { AttendancePunchStore } from './attendance-punch.store';
 import { DeviceAccessPolicy } from './device-access.policy';
+import { Inject } from '@nestjs/common';
+import { DEVICE_COMMAND_REPOSITORY } from './device-command.repository';
+import type { DeviceCommandRepository } from './device-command.repository';
 
 @Controller('iclock')
 export class IclockController {
   constructor(
     private readonly attendancePunchStore: AttendancePunchStore,
     private readonly deviceAccessPolicy: DeviceAccessPolicy,
+    @Inject(DEVICE_COMMAND_REPOSITORY)
+    private readonly deviceCommandRepository: DeviceCommandRepository,
   ) {}
 
   @Get('cdata')
@@ -93,7 +98,27 @@ export class IclockController {
 
   @Get('getrequest')
   @Header('Content-Type', 'text/plain; charset=utf-8')
-  pollCommand(
+  async pollCommand(
+    @Query('SN') serialNumber: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<string> {
+    if (!serialNumber) {
+      response.status(400);
+      return 'Invalid parameter';
+    }
+
+    if (!this.deviceAccessPolicy.allows(serialNumber)) {
+      response.status(403);
+      return 'Device is not registered';
+    }
+
+    return (await this.deviceCommandRepository.claimNext(serialNumber)) ?? 'OK';
+  }
+
+  @Post('devicecmd')
+  @HttpCode(200)
+  @Header('Content-Type', 'text/plain; charset=utf-8')
+  acknowledgeCommand(
     @Query('SN') serialNumber: string,
     @Res({ passthrough: true }) response: Response,
   ): string {

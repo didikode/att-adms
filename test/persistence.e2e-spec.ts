@@ -24,6 +24,9 @@ describe('PostgreSQL attendance persistence (e2e)', () => {
 
   beforeEach(async () => {
     process.env.ALLOWED_DEVICE_SERIALS = serialNumber;
+    await database.deviceCommand.deleteMany({
+      where: { device: { serialNumber } },
+    });
     await database.attendancePunch.deleteMany({
       where: { device: { serialNumber } },
     });
@@ -31,6 +34,9 @@ describe('PostgreSQL attendance persistence (e2e)', () => {
   });
 
   afterAll(async () => {
+    await database.deviceCommand.deleteMany({
+      where: { device: { serialNumber } },
+    });
     await database.attendancePunch.deleteMany({
       where: { device: { serialNumber } },
     });
@@ -72,5 +78,33 @@ describe('PostgreSQL attendance persistence (e2e)', () => {
       .expect('OK: 1');
 
     await restartedApp.close();
+  });
+
+  it('delivers a queued July backfill command once through device polling', async () => {
+    const device = await database.device.create({ data: { serialNumber } });
+    const command = await database.deviceCommand.create({
+      data: {
+        deviceId: device.id,
+        command:
+          'DATA QUERY ATTLOG StartTime=2026-07-01 00:00:00\tEndTime=2026-07-31 23:59:59',
+      },
+    });
+    const app = await createApplication();
+
+    await request(app.getHttpServer())
+      .get('/iclock/getrequest')
+      .query({ SN: serialNumber })
+      .expect(200)
+      .expect(
+        `C:${command.id}:DATA QUERY ATTLOG StartTime=2026-07-01 00:00:00\tEndTime=2026-07-31 23:59:59`,
+      );
+
+    await request(app.getHttpServer())
+      .get('/iclock/getrequest')
+      .query({ SN: serialNumber })
+      .expect(200)
+      .expect('OK');
+
+    await app.close();
   });
 });

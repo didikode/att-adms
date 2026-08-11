@@ -140,6 +140,17 @@ describe('ADMS device contract (e2e)', () => {
       .expect('OK');
   });
 
+  it('acknowledges a device command response', () => {
+    return request(app.getHttpServer())
+      .post('/iclock/devicecmd')
+      .query({ SN: configuredDeviceSerial })
+      .set('Content-Type', 'text/plain')
+      .send('ID=1\nReturn=0')
+      .expect(200)
+      .expect('Content-Type', /text\/plain/)
+      .expect('OK');
+  });
+
   it('rejects anonymous command polling', () => {
     return request(app.getHttpServer())
       .get('/iclock/getrequest')

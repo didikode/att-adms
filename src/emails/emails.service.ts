@@ -1,5 +1,4 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { readFileSync } from 'node:fs';
 import cron from 'node-cron';
 import nodemailer from 'nodemailer';
 import { ReportsService } from '../reports/reports.service';
@@ -15,12 +14,9 @@ export class EmailsService implements OnModuleInit {
     this.logger.log('Jadwal laporan email aktif: harian 08:30 dan Jumat 08:30 WIB');
   }
   private transport() {
-    const configFile = process.env.SMTP_CONFIG_FILE;
-    if (!configFile) throw new Error('SMTP_CONFIG_FILE belum diatur');
-    const fields = new Map(readFileSync(configFile, 'utf8').split(/\r?\n/).filter(Boolean).map((line) => { const [key, ...rest] = line.split(/\t+/); return [key.trim().toLowerCase(), rest.join(' ').trim()]; }));
-    const host = fields.get('smtp server') ?? fields.get('smtp host'); const port = Number(fields.get('smtp port') ?? 587); const user = fields.get('username'); const pass = fields.get('password');
+    const host = process.env.SMTP_HOST; const port = Number(process.env.SMTP_PORT ?? 587); const user = process.env.SMTP_USERNAME; const pass = process.env.SMTP_PASSWORD;
     if (!host || !user || !pass) throw new Error('File SMTP tidak lengkap');
-    return nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass } });
+    return nodemailer.createTransport({ host, port, secure: process.env.SMTP_SECURE === 'true', auth: { user, pass } });
   }
   private recipients() { return (process.env.REPORT_RECIPIENTS ?? '').split(',').map((value) => value.trim()).filter(Boolean); }
   private async send(from: string, to: string, subject: string) {

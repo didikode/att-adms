@@ -1,15 +1,18 @@
-import { BadRequestException, Controller, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Controller, Param, Post, Req, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { parse } from 'csv-parse/sync';
 import ExcelJS from 'exceljs';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { ImportsService } from './imports.service';
 
 @Controller('api/imports')
 @UseGuards(JwtAuthGuard)
 export class ImportsController {
+  constructor(private readonly imports: ImportsService) {}
+
   @Post('hr/preview')
   @UseInterceptors(FileInterceptor('file'))
-  async previewHr(@UploadedFile() file?: Express.Multer.File) {
+  async previewHr(@UploadedFile() file?: Express.Multer.File, @Req() request?: { user: { sub: string } }) {
     if (!file) throw new BadRequestException('File Excel wajib diunggah');
 
     const workbook = new ExcelJS.Workbook();
@@ -24,7 +27,7 @@ export class ImportsController {
     const employeeCodeColumn = headers.get('EmployeeID');
     if (!employeeCodeColumn) throw new BadRequestException('Kolom EmployeeID wajib tersedia');
 
-    const rows = [] as Array<{ rowNumber: number; status: 'valid' | 'invalid'; messages: string[]; normalized: { employeeCode: string; firstName: string; lastName: string; active: boolean } }>;
+    const rows = [] as Array<{ rowNumber: number; status: 'valid' | 'invalid'; messages: string[]; manualMapping: boolean; normalized: { employeeCode: string; firstName: string; lastName: string; active: boolean } }>;
     worksheet.eachRow((row, rowNumber) => {
       if (rowNumber === 1 || row.values.length === 0) return;
       const value = (header: string) => {
@@ -38,6 +41,7 @@ export class ImportsController {
         rowNumber,
         status: employeeCode ? 'valid' : 'invalid',
         messages: employeeCode ? [] : ['EmployeeID wajib diisi'],
+        manualMapping: !value('Pin') || !value('DeviceSerial'),
         normalized: {
           employeeCode,
           firstName: value('FirstName'),
@@ -46,7 +50,12 @@ export class ImportsController {
         },
       });
     });
-    return { summary: { total: rows.length, valid: rows.filter((row) => row.status === 'valid').length }, rows };
+    return this.imports.storeHrPreview(request!.user.sub, file.originalname, file.buffer, rows);
+  }
+
+  @Post(':importId/commit')
+  commitHr(@Param('importId') importId: string, @Req() request: { user: { sub: string } }) {
+    return this.imports.commitHrPreview(importId, request.user.sub);
   }
 
   @Post('device-enrollments/preview')

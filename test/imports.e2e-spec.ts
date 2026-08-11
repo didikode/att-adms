@@ -23,7 +23,7 @@ describe('Device enrollment import preview (e2e)', () => {
     authorization = `Bearer ${login.body.accessToken}`;
   });
 
-  afterAll(async () => { await app.close(); await database.user.deleteMany({ where: { email } }); await database.$disconnect(); });
+  afterAll(async () => { await app.close(); await database.importRun.deleteMany({ where: { actor: { email } } }); await database.user.deleteMany({ where: { email } }); await database.$disconnect(); });
 
   it('previews a device enrollment CSV without changing device data', async () => {
     const csv = 'Pin,Emp Name,Registration Device,FP Count\n000000715,Zaldi,NHZ4254800180(192.168.1.99),1\n';
@@ -48,7 +48,16 @@ describe('Device enrollment import preview (e2e)', () => {
       .attach('file', Buffer.from(buffer), 'employees.xlsx')
       .expect(201);
     expect(response.body.summary.total).toBe(1);
+    expect(response.body.summary.manualMapping).toBe(1);
     expect(response.body.rows[0].normalized.employeeCode).toBe('E.RMS002');
+    expect(response.body.importId).toEqual(expect.any(String));
     expect(await database.employee.count({ where: { employeeCode: 'E.RMS002' } })).toBe(0);
+
+    await request(app.getHttpServer())
+      .post(`/api/imports/${response.body.importId}/commit`)
+      .set('Authorization', authorization)
+      .expect(201);
+    expect(await database.employee.count({ where: { employeeCode: 'E.RMS002' } })).toBe(1);
+    await database.employee.deleteMany({ where: { employeeCode: 'E.RMS002' } });
   });
 });

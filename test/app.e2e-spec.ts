@@ -10,8 +10,11 @@ describe('ADMS device contract (e2e)', () => {
   let app: INestApplication<App>;
   let persistenceAccepts: boolean;
   let storedPunches: Set<string>;
+  const configuredDeviceSerial = 'TEST-X105-ID-001';
+  const previousAllowedDeviceSerials = process.env.ALLOWED_DEVICE_SERIALS;
 
   beforeEach(async () => {
+    process.env.ALLOWED_DEVICE_SERIALS = configuredDeviceSerial;
     persistenceAccepts = true;
     storedPunches = new Set<string>();
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -43,12 +46,12 @@ describe('ADMS device contract (e2e)', () => {
   it('returns the X105-ID handshake configuration', () => {
     return request(app.getHttpServer())
       .get('/iclock/cdata')
-      .query({ SN: 'TEST-X105-ID-001' })
+      .query({ SN: configuredDeviceSerial })
       .expect(200)
       .expect('Content-Type', /text\/plain/)
       .expect(
         [
-          'GET OPTION FROM: TEST-X105-ID-001',
+          `GET OPTION FROM: ${configuredDeviceSerial}`,
           'Stamp=0',
           'OpStamp=0',
           'ErrorDelay=60',
@@ -69,6 +72,15 @@ describe('ADMS device contract (e2e)', () => {
       .expect(400)
       .expect('Content-Type', /text\/plain/)
       .expect('Invalid parameter');
+  });
+
+  it('rejects a handshake from an unregistered device', () => {
+    return request(app.getHttpServer())
+      .get('/iclock/cdata')
+      .query({ SN: 'UNREGISTERED-X105-ID' })
+      .expect(403)
+      .expect('Content-Type', /text\/plain/)
+      .expect('Device is not registered');
   });
 
   it('accepts an ATTLOG record exactly once while acknowledging every upload', async () => {
@@ -138,5 +150,14 @@ describe('ADMS device contract (e2e)', () => {
 
   afterEach(async () => {
     await app.close();
+  });
+
+  afterAll(() => {
+    if (previousAllowedDeviceSerials === undefined) {
+      delete process.env.ALLOWED_DEVICE_SERIALS;
+      return;
+    }
+
+    process.env.ALLOWED_DEVICE_SERIALS = previousAllowedDeviceSerials;
   });
 });

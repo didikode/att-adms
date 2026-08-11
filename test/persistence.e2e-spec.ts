@@ -20,7 +20,10 @@ async function createApplication(): Promise<INestApplication<App>> {
 }
 
 describe('PostgreSQL attendance persistence (e2e)', () => {
+  const previousAllowedDeviceSerials = process.env.ALLOWED_DEVICE_SERIALS;
+
   beforeEach(async () => {
+    process.env.ALLOWED_DEVICE_SERIALS = serialNumber;
     await database.attendancePunch.deleteMany({
       where: { device: { serialNumber } },
     });
@@ -33,6 +36,13 @@ describe('PostgreSQL attendance persistence (e2e)', () => {
     });
     await database.device.deleteMany({ where: { serialNumber } });
     await database.$disconnect();
+
+    if (previousAllowedDeviceSerials === undefined) {
+      delete process.env.ALLOWED_DEVICE_SERIALS;
+      return;
+    }
+
+    process.env.ALLOWED_DEVICE_SERIALS = previousAllowedDeviceSerials;
   });
 
   it('deduplicates an ATTLOG record after the application restarts', async () => {

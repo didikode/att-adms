@@ -4,12 +4,14 @@ import { AttendancePunchStore } from './attendance-punch.store';
 import { ATTENDANCE_PUNCH_REPOSITORY } from './attendance-punch.repository';
 import { PrismaAttendancePunchRepository } from './prisma-attendance-punch.repository';
 import { PrismaModule } from '../prisma/prisma.module';
+import { DeviceAccessPolicy } from './device-access.policy';
 
 @Module({
   imports: [PrismaModule],
   controllers: [IclockController],
   providers: [
     AttendancePunchStore,
+    DeviceAccessPolicy,
     PrismaAttendancePunchRepository,
     {
       provide: ATTENDANCE_PUNCH_REPOSITORY,

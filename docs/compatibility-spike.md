@@ -13,6 +13,7 @@ The device currently points to `adms.ptreka.co.id:8191`. Do not replace that pro
 - `GET /iclock/getrequest?SN=<serial>` returns `OK` while no command is pending.
 - A repeated device/user/timestamp record is acknowledged but not stored twice. PostgreSQL enforces this with a unique constraint; the diagnostic `X-Records-Accepted` response header exposes the outcome during the spike.
 - A handshake without `SN` is rejected with HTTP 400 and `Invalid parameter`.
+- Only device serials listed in `ALLOWED_DEVICE_SERIALS` are accepted. An unregistered serial receives HTTP 403 and `Device is not registered`.
 
 ## PostgreSQL development database
 
@@ -22,7 +23,7 @@ The database stores the immutable raw Attendance Punch, including the device ser
 
 ## Remaining limitations
 
-- Device serial numbers are not yet allowlisted or registered through an admin workflow.
+- Device serial numbers are allowlisted through `ALLOWED_DEVICE_SERIALS`; an admin registration workflow is not yet implemented.
 - Command polling returns `OK`; a persistent command queue and range backfill are not implemented.
 - Attendance Day calculation, PDF, schedules, and email are not implemented.
 
@@ -41,7 +42,7 @@ Handshake example:
 
 ```powershell
 Invoke-WebRequest `
-  -Uri 'http://localhost:3000/iclock/cdata?SN=TEST-X105-ID-001' `
+  -Uri 'http://localhost:8192/iclock/cdata?SN=DEVICE_SERIAL_1' `
   -UseBasicParsing
 ```
 
@@ -50,7 +51,7 @@ ATTLOG example:
 ```powershell
 $attendanceBody = "411`t2026-08-11 08:00:00`t0`t1`t0`t0`t0`t0`t0`t0"
 Invoke-WebRequest `
-  -Uri 'http://localhost:3000/iclock/cdata?SN=TEST-X105-ID-001&table=ATTLOG&Stamp=1' `
+  -Uri 'http://localhost:8192/iclock/cdata?SN=DEVICE_SERIAL_1&table=ATTLOG&Stamp=1' `
   -Method Post `
   -ContentType 'text/plain' `
   -Body $attendanceBody `

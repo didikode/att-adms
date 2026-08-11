@@ -10,10 +10,14 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { AttendancePunchStore } from './attendance-punch.store';
+import { DeviceAccessPolicy } from './device-access.policy';
 
 @Controller('iclock')
 export class IclockController {
-  constructor(private readonly attendancePunchStore: AttendancePunchStore) {}
+  constructor(
+    private readonly attendancePunchStore: AttendancePunchStore,
+    private readonly deviceAccessPolicy: DeviceAccessPolicy,
+  ) {}
 
   @Get('cdata')
   @Header('Content-Type', 'text/plain; charset=utf-8')
@@ -24,6 +28,11 @@ export class IclockController {
     if (!serialNumber) {
       response.status(400);
       return 'Invalid parameter';
+    }
+
+    if (!this.deviceAccessPolicy.allows(serialNumber)) {
+      response.status(403);
+      return 'Device is not registered';
     }
 
     return [
@@ -56,6 +65,12 @@ export class IclockController {
       return 'Invalid parameter';
     }
 
+    if (!this.deviceAccessPolicy.allows(serialNumber)) {
+      response.status(403);
+      response.setHeader('X-Records-Accepted', '0');
+      return 'Device is not registered';
+    }
+
     if (table?.toUpperCase() !== 'ATTLOG') {
       response.setHeader('X-Records-Accepted', '0');
       return 'OK: 0';
@@ -85,6 +100,11 @@ export class IclockController {
     if (!serialNumber) {
       response.status(400);
       return 'Invalid parameter';
+    }
+
+    if (!this.deviceAccessPolicy.allows(serialNumber)) {
+      response.status(403);
+      return 'Device is not registered';
     }
 
     return 'OK';

@@ -8,22 +8,125 @@ datasource db {
 }
 
 model Device {
-  id           String            @id @default(cuid())
-  serialNumber String            @unique @map("serial_number") @db.VarChar(100)
-  createdAt    DateTime          @default(now()) @map("created_at")
-  updatedAt    DateTime          @updatedAt @map("updated_at")
-  punches      AttendancePunch[]
-  commands     DeviceCommand[]
+  id             String             @id @default(cuid())
+  serialNumber   String             @unique @map("serial_number") @db.VarChar(100)
+  aliasName      String?            @map("alias_name") @db.VarChar(100)
+  ipAddress      String?            @map("ip_address") @db.VarChar(45)
+  lastActivityAt DateTime?          @map("last_activity_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  updatedAt      DateTime           @updatedAt @map("updated_at")
+  punches        AttendancePunch[]
+  commands       DeviceCommand[]
+  enrollments    DeviceEnrollment[]
 
   @@map("devices")
 }
 
+enum UserRole {
+  ADMIN
+  HR
+}
+
+enum ImportStatus {
+  PREVIEWED
+  COMMITTED
+  FAILED
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique @db.VarChar(320)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  role         UserRole     @default(HR)
+  active       Boolean      @default(true)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  auditEvents  AuditEvent[]
+  importRuns   ImportRun[]
+
+  @@map("users")
+}
+
+model Employee {
+  id            String             @id @default(cuid())
+  employeeCode  String             @unique @map("employee_code") @db.VarChar(100)
+  firstName     String             @map("first_name") @db.VarChar(100)
+  lastName      String?            @map("last_name") @db.VarChar(100)
+  displayName   String             @map("display_name") @db.VarChar(200)
+  gender        String?            @db.VarChar(20)
+  divisionCode  String?            @map("division_code") @db.VarChar(100)
+  divisionName  String?            @map("division_name") @db.VarChar(200)
+  position      String?            @db.VarChar(200)
+  email         String?            @db.VarChar(320)
+  hireDate      DateTime?          @map("hire_date") @db.Date
+  activeDate    DateTime?          @map("active_date") @db.Date
+  active        Boolean            @default(true)
+  deactivatedAt DateTime?          @map("deactivated_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+  enrollments   DeviceEnrollment[]
+
+  @@index([active, displayName])
+  @@map("employees")
+}
+
+model DeviceEnrollment {
+  id               String   @id @default(cuid())
+  employeeId       String   @map("employee_id")
+  deviceId         String   @map("device_id")
+  pin              String   @db.VarChar(50)
+  fingerprintCount Int?     @map("fingerprint_count")
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Restrict)
+  device   Device   @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+
+  @@unique([deviceId, pin])
+  @@index([employeeId, active])
+  @@map("device_enrollments")
+}
+
+model ImportRun {
+  id          String       @id @default(cuid())
+  sourceType  String       @map("source_type") @db.VarChar(50)
+  fileName    String       @map("file_name") @db.VarChar(255)
+  checksum    String       @db.VarChar(64)
+  status      ImportStatus @default(PREVIEWED)
+  summary     Json
+  rowResults  Json         @map("row_results")
+  actorId     String       @map("actor_id")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  committedAt DateTime?    @map("committed_at")
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([checksum])
+  @@map("import_runs")
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String   @map("actor_id")
+  action     String   @db.VarChar(100)
+  targetType String   @map("target_type") @db.VarChar(100)
+  targetId   String   @map("target_id") @db.VarChar(100)
+  summary    Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId, createdAt])
+  @@map("audit_events")
+}
+
 model DeviceCommand {
-  id          Int      @id @default(autoincrement())
-  deviceId    String   @map("device_id")
-  command     String   @db.Text
-  status      String   @default("pending") @db.VarChar(20)
-  createdAt   DateTime @default(now()) @map("created_at")
+  id          Int       @id @default(autoincrement())
+  deviceId    String    @map("device_id")
+  command     String    @db.Text
+  status      String    @default("pending") @db.VarChar(20)
+  createdAt   DateTime  @default(now()) @map("created_at")
   deliveredAt DateTime? @map("delivered_at")
 
   device Device @relation(fields: [deviceId], references: [id], onDelete: Restrict)

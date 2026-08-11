@@ -8,8 +8,9 @@ import { AuditModule } from './audit/audit.module';
 import { ImportsModule } from './imports/imports.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { DevicesModule } from './devices/devices.module';
 
 @Module({
-  imports: [PrismaModule, IclockModule, AuthModule, ApiModule, AuditModule, EmployeesModule, ImportsModule, TransactionsModule, DashboardModule],
+  imports: [PrismaModule, IclockModule, AuthModule, ApiModule, AuditModule, EmployeesModule, ImportsModule, TransactionsModule, DashboardModule, DevicesModule],
 })
 export class AppModule {}

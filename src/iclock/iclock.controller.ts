@@ -14,6 +14,7 @@ import { DeviceAccessPolicy } from './device-access.policy';
 import { Inject } from '@nestjs/common';
 import { DEVICE_COMMAND_REPOSITORY } from './device-command.repository';
 import type { DeviceCommandRepository } from './device-command.repository';
+import { DevicesService } from '../devices/devices.service';
 
 @Controller('iclock')
 export class IclockController {
@@ -22,6 +23,7 @@ export class IclockController {
     private readonly deviceAccessPolicy: DeviceAccessPolicy,
     @Inject(DEVICE_COMMAND_REPOSITORY)
     private readonly deviceCommandRepository: DeviceCommandRepository,
+    private readonly devices: DevicesService,
   ) {}
 
   @Get('cdata')
@@ -40,6 +42,7 @@ export class IclockController {
       return 'Device is not registered';
     }
 
+    void this.devices.recordActivity(serialNumber);
     return [
       `GET OPTION FROM: ${serialNumber}`,
       'Stamp=0',
@@ -75,6 +78,8 @@ export class IclockController {
       response.setHeader('X-Records-Accepted', '0');
       return 'Device is not registered';
     }
+
+    await this.devices.recordActivity(serialNumber);
 
     if (table?.toUpperCase() !== 'ATTLOG') {
       response.setHeader('X-Records-Accepted', '0');
@@ -112,6 +117,8 @@ export class IclockController {
       return 'Device is not registered';
     }
 
+    await this.devices.recordActivity(serialNumber);
+
     return (await this.deviceCommandRepository.claimNext(serialNumber)) ?? 'OK';
   }
 
@@ -131,6 +138,8 @@ export class IclockController {
       response.status(403);
       return 'Device is not registered';
     }
+
+    void this.devices.recordActivity(serialNumber);
 
     return 'OK';
   }

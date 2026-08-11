@@ -7,9 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { DeviceAccessPolicy } from './device-access.policy';
 import { DEVICE_COMMAND_REPOSITORY } from './device-command.repository';
 import { PrismaDeviceCommandRepository } from './prisma-device-command.repository';
+import { DevicesModule } from '../devices/devices.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, DevicesModule],
   controllers: [IclockController],
   providers: [
     AttendancePunchStore,

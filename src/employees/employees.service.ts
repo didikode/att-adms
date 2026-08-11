@@ -7,6 +7,7 @@ export type CreateEmployeeInput = {
   firstName: string;
   lastName?: string;
   email?: string;
+  divisionName?: string;
 };
 
 @Injectable()
@@ -24,6 +25,7 @@ export class EmployeesService {
           firstName,
           lastName,
           email: input.email?.trim() || null,
+          divisionName: input.divisionName?.trim() || null,
           displayName: [firstName, lastName].filter(Boolean).join(' '),
         },
       });

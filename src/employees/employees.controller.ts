@@ -8,11 +8,11 @@ export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
 
   @Post()
-  create(@Body() body: { employeeCode?: string; firstName?: string; lastName?: string; email?: string }, @Req() request: { user: { sub: string } }) {
+  create(@Body() body: { employeeCode?: string; firstName?: string; lastName?: string; email?: string; divisionName?: string }, @Req() request: { user: { sub: string } }) {
     if (!body.employeeCode?.trim() || !body.firstName?.trim()) {
       throw new BadRequestException('EmployeeID dan nama depan wajib diisi');
     }
-    return this.employeesService.create(body as { employeeCode: string; firstName: string; lastName?: string; email?: string }, request.user.sub);
+    return this.employeesService.create(body as { employeeCode: string; firstName: string; lastName?: string; email?: string; divisionName?: string }, request.user.sub);
   }
 
   @Get()

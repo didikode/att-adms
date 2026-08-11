@@ -31,6 +31,12 @@ export class EmployeesController {
     return this.employeesService.deactivate(id, request.user.sub);
   }
 
+  @Post(':id/enrollments')
+  enrollment(@Param('id') id: string, @Body() body: { deviceSerialNumber?: string; pin?: string }, @Req() request: { user: { sub: string } }) {
+    if (!body.deviceSerialNumber?.trim() || !body.pin) throw new BadRequestException('Serial perangkat dan PIN wajib diisi');
+    return this.employeesService.addEnrollment(id, body as { deviceSerialNumber: string; pin: string }, request.user.sub);
+  }
+
   @Get(':id/audit')
   async audit(@Param('id') id: string) {
     return { data: await this.employeesService.auditList(id) };

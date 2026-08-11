@@ -54,6 +54,15 @@ export class EmployeesService {
     return employee;
   }
 
+  async addEnrollment(id: string, input: { deviceSerialNumber: string; pin: string }, actorId: string) {
+    const device = await this.prisma.device.findUniqueOrThrow({ where: { serialNumber: input.deviceSerialNumber.trim() } });
+    const enrollment = await this.prisma.deviceEnrollment.create({
+      data: { employeeId: id, deviceId: device.id, pin: input.pin },
+    });
+    await this.audit.record(actorId, 'DEVICE_ENROLLMENT_CREATED', id, { pin: input.pin, deviceSerialNumber: device.serialNumber });
+    return enrollment;
+  }
+
   auditList(id: string) {
     return this.audit.listEmployee(id);
   }

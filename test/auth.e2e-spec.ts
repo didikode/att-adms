@@ -11,16 +11,17 @@ describe('HR authentication (e2e)', () => {
   let app: INestApplication<App>;
   const database = new PrismaClient();
   const email = 'admin@example.test';
+  const hrEmail = 'hr@example.test';
   const password = 'CorrectHorse1!';
 
   beforeAll(async () => {
-    await database.user.deleteMany({ where: { email } });
-    await database.user.create({
-      data: {
-        email,
-        passwordHash: await bcrypt.hash(password, 12),
-        role: UserRole.ADMIN,
-      },
+    await database.user.deleteMany({ where: { email: { in: [email, hrEmail] } } });
+    const passwordHash = await bcrypt.hash(password, 12);
+    await database.user.createMany({
+      data: [
+        { email, passwordHash, role: UserRole.ADMIN },
+        { email: hrEmail, passwordHash, role: UserRole.HR },
+      ],
     });
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
@@ -32,7 +33,7 @@ describe('HR authentication (e2e)', () => {
 
   afterAll(async () => {
     await app.close();
-    await database.user.deleteMany({ where: { email } });
+    await database.user.deleteMany({ where: { email: { in: [email, hrEmail] } } });
     await database.$disconnect();
   });
 
@@ -58,5 +59,17 @@ describe('HR authentication (e2e)', () => {
       .set('Authorization', `Bearer ${login.body.accessToken}`)
       .expect(200)
       .expect({ email, role: 'ADMIN' });
+  });
+
+  it('forbids HR from an Admin-only API route', async () => {
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .send({ email: hrEmail, password })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/api/admin/health')
+      .set('Authorization', `Bearer ${login.body.accessToken}`)
+      .expect(403);
   });
 });

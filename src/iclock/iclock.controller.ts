@@ -44,12 +44,12 @@ export class IclockController {
   @Post('cdata')
   @HttpCode(200)
   @Header('Content-Type', 'text/plain; charset=utf-8')
-  uploadAttendance(
+  async uploadAttendance(
     @Query('SN') serialNumber: string,
     @Query('table') table: string,
     @Body() body: string,
     @Res({ passthrough: true }) response: Response,
-  ): string {
+  ): Promise<string> {
     if (!serialNumber) {
       response.status(400);
       response.setHeader('X-Records-Accepted', '0');
@@ -65,9 +65,12 @@ export class IclockController {
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
-    const accepted = lines.filter((line) =>
-      this.attendancePunchStore.accept(serialNumber, line),
-    ).length;
+    let accepted = 0;
+    for (const line of lines) {
+      if (await this.attendancePunchStore.accept(serialNumber, line)) {
+        accepted += 1;
+      }
+    }
 
     response.setHeader('X-Records-Accepted', String(accepted));
     return `OK: ${lines.length}`;

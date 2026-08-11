@@ -1,18 +1,39 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { ATTENDANCE_PUNCH_REPOSITORY } from './attendance-punch.repository';
+import type { AttendancePunchRepository } from './attendance-punch.repository';
 
 @Injectable()
 export class AttendancePunchStore {
-  private readonly identities = new Set<string>();
+  constructor(
+    @Inject(ATTENDANCE_PUNCH_REPOSITORY)
+    private readonly repository: AttendancePunchRepository,
+  ) {}
 
-  accept(serialNumber: string, line: string): boolean {
-    const [userId, timestamp] = line.split('\t');
-    const identity = `${serialNumber}\u0000${userId}\u0000${timestamp}`;
+  async accept(serialNumber: string, line: string): Promise<boolean> {
+    const [userId, occurredAtLocal, status, verify, workCode] =
+      line.split('\t');
 
-    if (this.identities.has(identity)) {
+    if (!userId || !occurredAtLocal) {
       return false;
     }
 
-    this.identities.add(identity);
-    return true;
+    return this.repository.save({
+      deviceSerialNumber: serialNumber,
+      userId,
+      occurredAtLocal,
+      status: this.parseInteger(status),
+      verify: this.parseInteger(verify),
+      workCode: this.parseInteger(workCode),
+      rawData: line,
+    });
+  }
+
+  private parseInteger(value: string | undefined): number | null {
+    if (!value) {
+      return null;
+    }
+
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
   }
 }

@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Device {
+  id           String            @id @default(cuid())
+  serialNumber String            @unique @map("serial_number") @db.VarChar(100)
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  punches      AttendancePunch[]
+
+  @@map("devices")
+}
+
+model AttendancePunch {
+  id              String   @id @default(cuid())
+  deviceId        String   @map("device_id")
+  userId          String   @map("user_id") @db.VarChar(50)
+  occurredAtLocal String   @map("occurred_at_local") @db.VarChar(19)
+  status          Int?
+  verify          Int?
+  workCode        Int?     @map("work_code")
+  rawData         String   @map("raw_data") @db.Text
+  receivedAt      DateTime @default(now()) @map("received_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+
+  @@unique([deviceId, userId, occurredAtLocal])
+  @@index([deviceId, occurredAtLocal])
+  @@map("attendance_punches")
+}

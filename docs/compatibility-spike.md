@@ -11,17 +11,27 @@ The device currently points to `adms.ptreka.co.id:8191`. Do not replace that pro
 - `GET /iclock/cdata?SN=<serial>` returns the ADMS handshake configuration as plain text.
 - `POST /iclock/cdata?SN=<serial>&table=ATTLOG&Stamp=<stamp>` acknowledges plain-text tab-separated attendance records.
 - `GET /iclock/getrequest?SN=<serial>` returns `OK` while no command is pending.
-- A repeated device/user/timestamp record is acknowledged but not accepted twice. The diagnostic `X-Records-Accepted` response header exposes this during the spike.
+- A repeated device/user/timestamp record is acknowledged but not stored twice. PostgreSQL enforces this with a unique constraint; the diagnostic `X-Records-Accepted` response header exposes the outcome during the spike.
 - A handshake without `SN` is rejected with HTTP 400 and `Invalid parameter`.
 
-## Important limitation
+## PostgreSQL development database
 
-The current `AttendancePunchStore` is intentionally in-memory. It proves parsing and idempotency within one running process only. It must be replaced by PostgreSQL with a unique constraint before staging receives production-like traffic or the service is restarted.
+`compose.yaml` runs the local PostgreSQL database on host port `5433`, because port `5432` is already in use on this workstation. The `.env` file is intentionally ignored by Git and uses the same development connection string as `.env.example`.
+
+The database stores the immutable raw Attendance Punch, including the device serial number, device identity, local device timestamp, status, verify value, work code, and raw line. The unique key is device, user, and local timestamp, so duplicate uploads remain safe even after an application restart.
+
+## Remaining limitations
+
+- Device serial numbers are not yet allowlisted or registered through an admin workflow.
+- Command polling returns `OK`; a persistent command queue and range backfill are not implemented.
+- Attendance Day calculation, PDF, schedules, and email are not implemented.
 
 ## Local verification
 
 ```powershell
 npm install
+npm run db:up
+npx prisma migrate dev
 npx jest --config ./test/jest-e2e.json --runInBand
 npx tsc --noEmit --incremental false
 npm run start:dev
@@ -56,13 +66,13 @@ Invoke-WebRequest `
 5. Confirm handshake, one live punch, duplicate acknowledgment, and command polling.
 6. Restore `adms.ptreka.co.id:8191` immediately if the device does not receive the expected acknowledgment.
 7. Compare transaction counts with the existing attendance system.
-8. Do not attempt backfill until a persistent command queue and PostgreSQL storage exist.
+8. Do not attempt backfill until the persistent command queue is implemented.
 
 ## Exit criteria
 
 - A real X105-ID completes the handshake.
 - A sanitized real `ATTLOG` payload is captured as a test fixture.
-- A live punch is acknowledged and visible in persistent storage.
+- A live punch is acknowledged and visible in PostgreSQL persistent storage.
 - A duplicate upload does not create a duplicate punch.
 - Command polling is observed.
 - A range backfill is requested and reconciled after the persistent command queue is implemented.

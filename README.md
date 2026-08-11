@@ -8,6 +8,8 @@ The repository is currently in the compatibility-spike phase. See [docs/compatib
 
 ```powershell
 npm install
+npm run db:up
+npx prisma migrate dev
 npx jest --config ./test/jest-e2e.json --runInBand
 npx tsc --noEmit --incremental false
 npm run start:dev

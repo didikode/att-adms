@@ -4,14 +4,36 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
 import { configureApp } from './../src/configure-app';
+import { ATTENDANCE_PUNCH_REPOSITORY } from './../src/iclock/attendance-punch.repository';
 
 describe('ADMS device contract (e2e)', () => {
   let app: INestApplication<App>;
+  let persistenceAccepts: boolean;
+  let storedPunches: Set<string>;
 
   beforeEach(async () => {
+    persistenceAccepts = true;
+    storedPunches = new Set<string>();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(ATTENDANCE_PUNCH_REPOSITORY)
+      .useValue({
+        save: (input: {
+          deviceSerialNumber: string;
+          userId: string;
+          occurredAtLocal: string;
+        }) => {
+          const identity = `${input.deviceSerialNumber}\u0000${input.userId}\u0000${input.occurredAtLocal}`;
+          if (!persistenceAccepts || storedPunches.has(identity)) {
+            return Promise.resolve(false);
+          }
+
+          storedPunches.add(identity);
+          return Promise.resolve(true);
+        },
+      })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     configureApp(app);
@@ -82,6 +104,19 @@ describe('ADMS device contract (e2e)', () => {
       .expect('Content-Type', /text\/plain/)
       .expect('X-Records-Accepted', '0')
       .expect('Invalid parameter');
+  });
+
+  it('acknowledges a duplicate reported by persistent storage', () => {
+    persistenceAccepts = false;
+
+    return request(app.getHttpServer())
+      .post('/iclock/cdata')
+      .query({ SN: 'TEST-X105-ID-001', table: 'ATTLOG', Stamp: '1' })
+      .set('Content-Type', 'text/plain')
+      .send('411\t2026-08-11 08:00:00\t0\t1\t0')
+      .expect(200)
+      .expect('X-Records-Accepted', '0')
+      .expect('OK: 1');
   });
 
   it('returns OK when the device has no pending command', () => {

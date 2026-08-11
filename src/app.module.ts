@@ -5,8 +5,9 @@ import { ApiModule } from './api/api.module';
 import { AuthModule } from './auth/auth.module';
 import { EmployeesModule } from './employees/employees.module';
 import { AuditModule } from './audit/audit.module';
+import { ImportsModule } from './imports/imports.module';
 
 @Module({
-  imports: [PrismaModule, IclockModule, AuthModule, ApiModule, AuditModule, EmployeesModule],
+  imports: [PrismaModule, IclockModule, AuthModule, ApiModule, AuditModule, EmployeesModule, ImportsModule],
 })
 export class AppModule {}

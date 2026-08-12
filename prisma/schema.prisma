@@ -87,6 +87,7 @@ model ReportDelivery {
   periodStart    String   @map("period_start") @db.VarChar(10)
   periodEnd      String   @map("period_end") @db.VarChar(10)
   status         String   @db.VarChar(20)
+  kind           String   @default("SCHEDULED") @db.VarChar(20)
   recipientCount Int      @map("recipient_count")
   errorMessage   String?  @map("error_message") @db.Text
   sentAt         DateTime? @map("sent_at")
@@ -94,7 +95,7 @@ model ReportDelivery {
 
   schedule ReportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
 
-  @@unique([scheduleId, periodStart, periodEnd])
+  @@unique([scheduleId, periodStart, periodEnd, kind])
   @@index([scheduleId, createdAt])
   @@map("report_deliveries")
 }

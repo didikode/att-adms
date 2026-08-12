@@ -19,7 +19,8 @@ export class ReportSchedulesService {
     return this.prisma.reportSchedule.create({ data: { name: input.name.trim(), frequency: input.frequency, weekday: input.frequency === ReportFrequency.WEEKLY ? input.weekday : null, time: input.time!, recipients, scope: input.scope ?? ReportScope.ALL, employeeId: input.employeeId || null, divisionName: input.divisionName?.trim() || null, createdById } });
   }
   setActive(id: string, active: boolean) { return this.prisma.reportSchedule.update({ where: { id }, data: { active } }); }
-  beginDelivery(scheduleId: string, periodStart: string, periodEnd: string, recipientCount: number) { return this.prisma.reportDelivery.create({ data: { scheduleId, periodStart, periodEnd, recipientCount, status: 'SENDING' } }); }
+  find(id: string) { return this.prisma.reportSchedule.findUniqueOrThrow({ where: { id } }); }
+  beginDelivery(scheduleId: string, periodStart: string, periodEnd: string, recipientCount: number, kind = 'SCHEDULED') { return this.prisma.reportDelivery.create({ data: { scheduleId, periodStart, periodEnd, recipientCount, kind, status: 'SENDING' } }); }
   completeDelivery(id: string) { return this.prisma.reportDelivery.update({ where: { id }, data: { status: 'SENT', sentAt: new Date() } }); }
   failDelivery(id: string, error: unknown) { return this.prisma.reportDelivery.update({ where: { id }, data: { status: 'FAILED', errorMessage: error instanceof Error ? error.message : 'Pengiriman gagal' } }); }
 }

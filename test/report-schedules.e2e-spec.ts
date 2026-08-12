@@ -14,5 +14,6 @@ describe('Report schedules (e2e)', () => {
   it('creates a weekly schedule with recipient and division scope', async () => {
     const response = await request(app.getHttpServer()).post('/api/report-schedules').set('Authorization', authorization).send({ name: 'Laporan HR mingguan', frequency: 'WEEKLY', weekday: 5, time: '08:30', recipients: ['didilesmana.net@gmail.com'], scope: 'DIVISION', divisionName: 'HRD' }).expect(201);
     expect(response.body).toEqual(expect.objectContaining({ frequency: 'WEEKLY', recipients: ['didilesmana.net@gmail.com'], divisionName: 'HRD', active: false }));
+    await request(app.getHttpServer()).post(`/api/report-schedules/${response.body.id}/test-send`).set('Authorization', authorization).send({}).expect(201).expect({ sent: false, message: 'Konfirmasi wajib diisi' });
   });
 });

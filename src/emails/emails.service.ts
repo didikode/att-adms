@@ -24,6 +24,11 @@ export class EmailsService implements OnModuleInit {
     await this.transport().sendMail({ from: process.env.MAIL_FROM, to: recipients, subject, text: `Terlampir laporan absensi WIB periode ${from} sampai ${to}.`, attachments: [{ filename: `laporan-absensi-${from}-${to}.pdf`, content: pdf, contentType: 'application/pdf' }] });
   }
   private date(offset: number) { const date = new Date(Date.now() + offset * 86400000); return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta' }).format(date); }
+  async sendTest(scheduleId: string) {
+    const schedule = await this.schedules.find(scheduleId); const periodEnd = this.date(0); const periodStart = schedule.frequency === ReportFrequency.WEEKLY ? this.date(-6) : periodEnd; const recipients = schedule.recipients as unknown as string[];
+    const delivery = await this.schedules.beginDelivery(schedule.id, periodStart, periodEnd, recipients.length, 'TEST');
+    try { await this.send(periodStart, periodEnd, `[UJI] ${schedule.name} ${periodStart} - ${periodEnd}`, recipients, schedule.scope === ReportScope.EMPLOYEE ? schedule.employeeId ?? undefined : undefined, schedule.scope === ReportScope.DIVISION ? schedule.divisionName ?? undefined : undefined); await this.schedules.completeDelivery(delivery.id); return delivery; } catch (error) { await this.schedules.failDelivery(delivery.id, error); throw error; }
+  }
   async runDue() {
     const pieces = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jakarta', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
     const part = (type: string) => pieces.find((item) => item.type === type)?.value ?? ''; const time = `${part('hour')}:${part('minute')}`; const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(part('weekday'));

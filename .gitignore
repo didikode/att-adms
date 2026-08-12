@@ -6,4 +6,5 @@ coverage/
 !.env.example
 logs/
 *.log
+smtp
 .worktrees/

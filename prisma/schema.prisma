@@ -33,6 +33,17 @@ enum ImportStatus {
   FAILED
 }
 
+enum ReportFrequency {
+  DAILY
+  WEEKLY
+}
+
+enum ReportScope {
+  ALL
+  EMPLOYEE
+  DIVISION
+}
+
 model User {
   id           String       @id @default(cuid())
   email        String       @unique @db.VarChar(320)
@@ -43,8 +54,49 @@ model User {
   updatedAt    DateTime     @updatedAt @map("updated_at")
   auditEvents  AuditEvent[]
   importRuns   ImportRun[]
+  reportSchedules ReportSchedule[]
 
   @@map("users")
+}
+
+model ReportSchedule {
+  id           String          @id @default(cuid())
+  name         String          @db.VarChar(200)
+  frequency    ReportFrequency
+  weekday      Int?
+  time         String          @db.VarChar(5)
+  recipients   Json
+  scope        ReportScope     @default(ALL)
+  employeeId   String?         @map("employee_id")
+  divisionName String?         @map("division_name") @db.VarChar(200)
+  active       Boolean         @default(false)
+  createdById  String          @map("created_by_id")
+  createdAt    DateTime        @default(now()) @map("created_at")
+  updatedAt    DateTime        @updatedAt @map("updated_at")
+  deliveries   ReportDelivery[]
+
+  createdBy User @relation(fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([active, frequency, weekday, time])
+  @@map("report_schedules")
+}
+
+model ReportDelivery {
+  id             String   @id @default(cuid())
+  scheduleId     String   @map("schedule_id")
+  periodStart    String   @map("period_start") @db.VarChar(10)
+  periodEnd      String   @map("period_end") @db.VarChar(10)
+  status         String   @db.VarChar(20)
+  recipientCount Int      @map("recipient_count")
+  errorMessage   String?  @map("error_message") @db.Text
+  sentAt         DateTime? @map("sent_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  schedule ReportSchedule @relation(fields: [scheduleId], references: [id], onDelete: Restrict)
+
+  @@unique([scheduleId, periodStart, periodEnd])
+  @@index([scheduleId, createdAt])
+  @@map("report_deliveries")
 }
 
 model Employee {

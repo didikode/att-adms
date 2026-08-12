@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'node:path';
 import { IclockModule } from './iclock/iclock.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ApiModule } from './api/api.module';
@@ -14,6 +16,24 @@ import { EmailsModule } from './emails/emails.module';
 import { ReportSchedulesModule } from './report-schedules/report-schedules.module';
 
 @Module({
-  imports: [PrismaModule, IclockModule, AuthModule, ApiModule, AuditModule, EmployeesModule, ImportsModule, TransactionsModule, DashboardModule, DevicesModule, ReportsModule, EmailsModule, ReportSchedulesModule],
+  imports: [
+    ServeStaticModule.forRoot({
+      rootPath: join(process.cwd(), 'web', 'dist'),
+      exclude: ['/api{*splat}', '/iclock{*splat}'],
+    }),
+    PrismaModule,
+    IclockModule,
+    AuthModule,
+    ApiModule,
+    AuditModule,
+    EmployeesModule,
+    ImportsModule,
+    TransactionsModule,
+    DashboardModule,
+    DevicesModule,
+    ReportsModule,
+    EmailsModule,
+    ReportSchedulesModule,
+  ],
 })
 export class AppModule {}

@@ -1,30 +1,110 @@
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
+import request from 'supertest';
+import { App } from 'supertest/types';
+import { AppModule } from './../src/app.module';
+import { configureApp } from './../src/configure-app';
 
-describe('Employee candidate persistence (e2e)', () => {
-  const database = new PrismaClient();
-  const serialNumber = 'TEST-CANDIDATE-PERSISTENCE';
+const database = new PrismaClient();
+const serialNumber = 'PERSISTENCE-TEST-X105-ID-001';
 
-  beforeAll(async () => {
-    await database.employeeCandidate.deleteMany({ where: { device: { serialNumber } } });
+async function createApplication(): Promise<INestApplication<App>> {
+  const moduleFixture = await Test.createTestingModule({
+    imports: [AppModule],
+  }).compile();
+  const app = moduleFixture.createNestApplication();
+  configureApp(app);
+  await app.init();
+  return app;
+}
+
+describe('PostgreSQL attendance persistence (e2e)', () => {
+  const previousAllowedDeviceSerials = process.env.ALLOWED_DEVICE_SERIALS;
+
+  beforeEach(async () => {
+    process.env.ALLOWED_DEVICE_SERIALS = serialNumber;
+    await database.deviceCommand.deleteMany({
+      where: { device: { serialNumber } },
+    });
+    await database.attendancePunch.deleteMany({
+      where: { device: { serialNumber } },
+    });
     await database.device.deleteMany({ where: { serialNumber } });
   });
 
   afterAll(async () => {
-    await database.employeeCandidate.deleteMany({ where: { device: { serialNumber } } });
+    await database.deviceCommand.deleteMany({
+      where: { device: { serialNumber } },
+    });
+    await database.attendancePunch.deleteMany({
+      where: { device: { serialNumber } },
+    });
     await database.device.deleteMany({ where: { serialNumber } });
     await database.$disconnect();
+
+    if (previousAllowedDeviceSerials === undefined) {
+      delete process.env.ALLOWED_DEVICE_SERIALS;
+      return;
+    }
+
+    process.env.ALLOWED_DEVICE_SERIALS = previousAllowedDeviceSerials;
   });
 
-  it('persists one candidate per device and PIN without sensitive fields', async () => {
-    const device = await database.device.create({ data: { serialNumber } });
-    const candidate = await database.employeeCandidate.create({
-      data: { deviceId: device.id, pin: '0007', status: 'REQUESTED', requestedAt: new Date() },
-    });
+  it('deduplicates an ATTLOG record after the application restarts', async () => {
+    const attendanceLine = '411\t2026-08-11 08:00:00\t0\t1\t0';
+    const firstApp = await createApplication();
 
-    expect(candidate).toEqual(expect.objectContaining({ pin: '0007', name: null, status: 'REQUESTED' }));
-    expect(candidate).not.toHaveProperty('password');
-    await expect(database.employeeCandidate.create({
-      data: { deviceId: device.id, pin: '0007', status: 'REQUESTED', requestedAt: new Date() },
-    })).rejects.toMatchObject({ code: 'P2002' });
+    await request(firstApp.getHttpServer())
+      .post('/iclock/cdata')
+      .query({ SN: serialNumber, table: 'ATTLOG', Stamp: '1' })
+      .set('Content-Type', 'text/plain')
+      .send(attendanceLine)
+      .expect(200)
+      .expect('X-Records-Accepted', '1')
+      .expect('OK: 1');
+
+    await firstApp.close();
+
+    const restartedApp = await createApplication();
+
+    await request(restartedApp.getHttpServer())
+      .post('/iclock/cdata')
+      .query({ SN: serialNumber, table: 'ATTLOG', Stamp: '1' })
+      .set('Content-Type', 'text/plain')
+      .send(attendanceLine)
+      .expect(200)
+      .expect('X-Records-Accepted', '0')
+      .expect('OK: 1');
+
+    await restartedApp.close();
+  });
+
+  it('delivers a queued July backfill command once through device polling', async () => {
+    const device = await database.device.create({ data: { serialNumber } });
+    const command = await database.deviceCommand.create({
+      data: {
+        deviceId: device.id,
+        command:
+          'DATA QUERY ATTLOG StartTime=2026-07-01 00:00:00\tEndTime=2026-07-31 23:59:59',
+      },
+    });
+    const app = await createApplication();
+
+    await request(app.getHttpServer())
+      .get('/iclock/getrequest')
+      .query({ SN: serialNumber })
+      .expect(200)
+      .expect(
+        `C:${command.id}:DATA QUERY ATTLOG StartTime=2026-07-01 00:00:00\tEndTime=2026-07-31 23:59:59`,
+      );
+
+    await request(app.getHttpServer())
+      .get('/iclock/getrequest')
+      .query({ SN: serialNumber })
+      .expect(200)
+      .expect('OK');
+
+    await app.close();
   });
 });

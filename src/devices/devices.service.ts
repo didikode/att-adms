@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -13,9 +13,19 @@ export class DevicesService {
       lastActivityAt: device.lastActivityAt, transferTime: '00:00;14:05', interval: 1,
       firmwareVersion: null, deviceName: null, userCount: device._count.enrollments,
       fingerprintCount: null, transactionCount: device._count.punches, department: null,
+      configuredAllowed: this.isConfiguredAllowed(device.serialNumber),
     }));
+  }
+  async register(value: string) {
+    const serialNumber = value.trim();
+    const existing = await this.prisma.device.findUnique({ where: { serialNumber } });
+    if (existing) throw new ConflictException(`Serial number ${serialNumber} sudah terdaftar`);
+    return this.prisma.device.create({ data: { serialNumber } });
   }
   async recordActivity(serialNumber: string) {
     await this.prisma.device.upsert({ where: { serialNumber }, create: { serialNumber, lastActivityAt: new Date() }, update: { lastActivityAt: new Date() } });
+  }
+  private isConfiguredAllowed(serialNumber: string): boolean {
+    return (process.env.ALLOWED_DEVICE_SERIALS ?? '').split(',').map((value) => value.trim()).filter(Boolean).includes(serialNumber);
   }
 }

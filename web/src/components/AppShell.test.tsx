@@ -23,4 +23,11 @@ describe('AppShell', () => {
 
     expect(onLogout).toHaveBeenCalledOnce();
   });
+
+  it('does not show Impor Data in desktop or mobile navigation', async () => {
+    render(<AppShell activePage="Dashboard" onNavigate={vi.fn()} onLogout={vi.fn()} heading={<h1>Dashboard</h1>}><p>content</p></AppShell>);
+    expect(screen.queryByRole('button', { name: 'Impor Data' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /buka menu/i }));
+    expect(screen.queryByRole('button', { name: 'Impor Data' })).not.toBeInTheDocument();
+  });
 });

@@ -15,6 +15,7 @@ import { Inject } from '@nestjs/common';
 import { DEVICE_COMMAND_REPOSITORY } from './device-command.repository';
 import type { DeviceCommandRepository } from './device-command.repository';
 import { DevicesService } from '../devices/devices.service';
+import { EmployeeCandidatesService } from '../employee-candidates/employee-candidates.service';
 
 @Controller('iclock')
 export class IclockController {
@@ -24,6 +25,7 @@ export class IclockController {
     @Inject(DEVICE_COMMAND_REPOSITORY)
     private readonly deviceCommandRepository: DeviceCommandRepository,
     private readonly devices: DevicesService,
+    private readonly candidates: EmployeeCandidatesService,
   ) {}
 
   @Get('cdata')
@@ -81,6 +83,13 @@ export class IclockController {
 
     await this.devices.recordActivity(serialNumber);
 
+    if (table?.toUpperCase() === 'OPERLOG') {
+      const entries = body.split(/\r?\n/).map((line) => this.parseUserInfo(line)).filter((entry): entry is { pin: string; name: string | null } => entry !== null);
+      const accepted = await this.candidates.acceptUserInfo(serialNumber, entries);
+      response.setHeader('X-Records-Accepted', String(accepted));
+      return `OK: ${accepted}`;
+    }
+
     if (table?.toUpperCase() !== 'ATTLOG') {
       response.setHeader('X-Records-Accepted', '0');
       return 'OK: 0';
@@ -99,6 +108,14 @@ export class IclockController {
 
     response.setHeader('X-Records-Accepted', String(accepted));
     return `OK: ${lines.length}`;
+  }
+
+  private parseUserInfo(line: string): { pin: string; name: string | null } | null {
+    const fields = line.trim().split('\t');
+    if (!fields[0]?.startsWith('USER PIN=')) return null;
+    const pin = fields[0].slice('USER PIN='.length).trim();
+    const nameField = fields.find((field) => field.startsWith('Name='));
+    return pin ? { pin, name: nameField?.slice('Name='.length).trim() || null } : null;
   }
 
   @Get('getrequest')

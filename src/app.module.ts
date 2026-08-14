@@ -7,13 +7,13 @@ import { ApiModule } from './api/api.module';
 import { AuthModule } from './auth/auth.module';
 import { EmployeesModule } from './employees/employees.module';
 import { AuditModule } from './audit/audit.module';
-import { ImportsModule } from './imports/imports.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DevicesModule } from './devices/devices.module';
 import { ReportsModule } from './reports/reports.module';
 import { EmailsModule } from './emails/emails.module';
 import { ReportSchedulesModule } from './report-schedules/report-schedules.module';
+import { EmployeeCandidatesModule } from './employee-candidates/employee-candidates.module';
 
 @Module({
   imports: [
@@ -27,13 +27,13 @@ import { ReportSchedulesModule } from './report-schedules/report-schedules.modul
     ApiModule,
     AuditModule,
     EmployeesModule,
-    ImportsModule,
     TransactionsModule,
     DashboardModule,
     DevicesModule,
     ReportsModule,
     EmailsModule,
     ReportSchedulesModule,
+    EmployeeCandidatesModule,
   ],
 })
 export class AppModule {}

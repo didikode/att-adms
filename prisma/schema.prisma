@@ -18,6 +18,7 @@ model Device {
   punches        AttendancePunch[]
   commands       DeviceCommand[]
   enrollments    DeviceEnrollment[]
+  employeeCandidates EmployeeCandidate[]
 
   @@map("devices")
 }
@@ -36,6 +37,13 @@ enum ImportStatus {
 enum ReportFrequency {
   DAILY
   WEEKLY
+  MONTHLY
+}
+
+enum EmployeeCandidateStatus {
+  REQUESTED
+  READY
+  SAVED
 }
 
 enum ReportScope {
@@ -139,6 +147,23 @@ model DeviceEnrollment {
   @@unique([deviceId, pin])
   @@index([employeeId, active])
   @@map("device_enrollments")
+}
+
+model EmployeeCandidate {
+  id          String                  @id @default(cuid())
+  deviceId    String                  @map("device_id")
+  pin         String                  @db.VarChar(50)
+  name        String?                 @db.VarChar(200)
+  status      EmployeeCandidateStatus @default(REQUESTED)
+  requestedAt DateTime                @default(now()) @map("requested_at")
+  receivedAt  DateTime?               @map("received_at")
+  savedAt     DateTime?               @map("saved_at")
+
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Restrict)
+
+  @@unique([deviceId, pin])
+  @@index([status, requestedAt])
+  @@map("employee_candidates")
 }
 
 model ImportRun {

@@ -16,4 +16,8 @@ describe('Report schedules (e2e)', () => {
     expect(response.body).toEqual(expect.objectContaining({ frequency: 'WEEKLY', recipients: ['didilesmana.net@gmail.com'], divisionName: 'HRD', active: false }));
     await request(app.getHttpServer()).post(`/api/report-schedules/${response.body.id}/test-send`).set('Authorization', authorization).send({}).expect(201).expect({ sent: false, message: 'Konfirmasi wajib diisi' });
   });
+  it('creates a monthly schedule without weekday', async () => {
+    const response = await request(app.getHttpServer()).post('/api/report-schedules').set('Authorization', authorization).send({ name: 'Laporan bulanan', frequency: 'MONTHLY', time: '08:30', recipients: ['hr@example.test'], scope: 'ALL' }).expect(201);
+    expect(response.body).toEqual(expect.objectContaining({ frequency: 'MONTHLY', weekday: null }));
+  });
 });

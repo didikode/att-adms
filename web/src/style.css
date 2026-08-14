@@ -29,7 +29,7 @@ input, select { min-height: 40px; border: 2px solid #cdd7e4; border-radius: 6px;
 .metrics article { min-height: 112px; padding: 21px; display: grid; place-content: center; gap: 6px; text-align: center; }
 .metrics p { margin: 0; color: #56657b; font-weight: 600; letter-spacing: .18px; }
 .metrics strong { color: #9e4727; font-size: 30px; line-height: 44px; letter-spacing: .18px; }
-.content { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(294px, 1fr); gap: 18px; }
+.content { display: grid; grid-template-columns: 488px 294px; gap: 18px; max-width: 800px; }
 .panel { padding: 22px; }
 .panel-title { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; }
 .panel-title a { color: #9e4727; text-decoration: none; white-space: nowrap; }
@@ -97,4 +97,7 @@ td { color: #26354c; }
   .employee-list table, .schedule-page table { min-width: 640px; }
   .login-page { padding: 14px; place-items: start center; }
   .login-card { width: 358px; max-width: 100%; margin-top: 156px; padding: 24px; }
+}
+@media (min-width: 901px) and (max-width: 1120px) {
+  .content { grid-template-columns: minmax(0, 1.65fr) minmax(294px, 1fr); max-width: 100%; }
 }

@@ -15,7 +15,10 @@ button { cursor: pointer; }
 .sidebar-nav { display: grid; gap: 7px; }
 .sidebar-nav button, .drawer-nav button { border: 0; border-radius: 7px; padding: 14px 16px; color: #f4e7e1; background: transparent; font-weight: 600; text-align: left; }
 .sidebar-nav button:hover, .sidebar-nav .is-selected, .drawer-nav .is-selected { color: #fff; background: #9e4727; }
-.sidebar-note { margin-top: auto; padding: 16px; color: #d8b6a8; font-size: 12px; text-align: center; }
+.sidebar-footer { margin-top: auto; }
+.logout-button { width: 100%; border: 1px solid rgb(244 231 225 / 45%); border-radius: 7px; padding: 10px 16px; color: #fff; background: transparent; font-weight: 600; text-align: left; }
+.logout-button:hover { background: #9e4727; }
+.sidebar-note { padding: 16px; color: #d8b6a8; font-size: 12px; text-align: center; }
 .app-content { min-width: 0; }
 .mobile-app-bar { display: none; }
 main { max-width: 1188px; margin: 0 auto; padding: 28px 38px; }
@@ -71,6 +74,7 @@ td { color: #26354c; }
 .menu-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; color: #fff; font-size: 20px; font-weight: 700; }
 .menu-heading button { border: 0; color: #fff; background: transparent; font-size: 28px; }
 .drawer-nav { display: grid; gap: 7px; }
+.menu-sheet .logout-button { margin-top: 20px; }
 @media (max-width: 900px) {
   .app-shell { display: block; }
   .desktop-sidebar { display: none; }
